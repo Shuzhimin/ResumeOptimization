@@ -24,6 +24,9 @@ const canAnalyze = computed(() => canContinueResume.value && jobDescription.valu
 const renderedResumeHtml = computed(() =>
   optimized.value ? markdownToResumeHtml(optimized.value.optimized_resume_markdown) : "",
 );
+const sectionAnalysisCards = computed(() => analysis.value?.section_analysis ?? []);
+const detectedSections = computed(() => analysis.value?.detected_sections ?? []);
+const optimizedSectionCards = computed(() => optimized.value?.optimized_sections ?? []);
 
 const currentStepIndex = computed(() => {
   switch (page.value) {
@@ -45,17 +48,17 @@ const currentStepIndex = computed(() => {
 });
 
 const waitingTitle = computed(() => {
-  if (page.value === "analyzing") return "正在分析简历与岗位匹配度";
-  if (page.value === "optimizing") return "正在生成优化后的简历成品";
+  if (page.value === "analyzing") return "正在进行 section 识别与匹配分析";
+  if (page.value === "optimizing") return "正在按 section 优化并重组简历";
   return "";
 });
 
 const waitingDescription = computed(() => {
   if (page.value === "analyzing") {
-    return "系统正在提取岗位关键词、识别亮点与缺口，并整理针对性的修改建议。";
+    return "系统正在拆分简历结构，判断每个部分是否需要修改，并生成逐段优化建议。";
   }
   if (page.value === "optimizing") {
-    return "系统正在根据分析结果重写简历结构与表述，输出可直接查看和导出的中文简历成品。";
+    return "系统正在仅重写需要优化的部分，然后将各 section 重新组合为完整中文简历成品。";
   }
   return "";
 });
@@ -225,6 +228,16 @@ function exportTxt() {
   downloadText("优化后简历.txt", optimized.value.optimized_resume_markdown);
 }
 
+function sectionStatusLabel(item) {
+  if (item.missing_but_recommended) return "建议补充";
+  if (item.needs_optimization) return "需要优化";
+  return "可直接保留";
+}
+
+function optimizedSectionStatus(item) {
+  return item.updated ? "已优化" : "已保留";
+}
+
 function escapeHtml(value) {
   return value
     .replaceAll("&", "&amp;")
@@ -311,12 +324,12 @@ function markdownToResumeHtml(markdown) {
               <p>支持文本输入，也支持 TXT / PDF 文件解析。</p>
             </article>
             <article class="feature-card">
-              <strong>逐步分析匹配度</strong>
-              <p>展示岗位亮点、能力缺口和针对性优化建议。</p>
+              <strong>逐段分析匹配度</strong>
+              <p>自动识别 section，并判断每一部分是否需要单独优化。</p>
             </article>
             <article class="feature-card">
-              <strong>生成最终简历成品</strong>
-              <p>输出中文成品简历，并保留 Markdown 原文便于继续修改。</p>
+              <strong>重组最终成品</strong>
+              <p>只重写需要修改的部分，再重新拼装为完整中文简历。</p>
             </article>
           </div>
         </section>
@@ -329,7 +342,7 @@ function markdownToResumeHtml(markdown) {
           <div class="sidebar-top">
             <p class="eyebrow">功能流程</p>
             <h2>简历优化</h2>
-            <p>每个阶段独立展示，结果确认后再进入下一步。</p>
+            <p>按 section 识别、诊断、优化并重组，结果确认后再进入下一步。</p>
           </div>
 
           <div class="step-list">
@@ -391,7 +404,7 @@ function markdownToResumeHtml(markdown) {
             <div class="page-head">
               <p class="section-kicker">步骤二</p>
               <h1>输入目标职位描述</h1>
-              <p>请输入岗位职责、技术要求、经验要求和加分项，系统会据此分析简历匹配度。</p>
+              <p>请输入岗位职责、技术要求、经验要求和加分项，系统会据此分析每个 section 是否需要优化。</p>
             </div>
 
             <textarea
@@ -422,7 +435,7 @@ function markdownToResumeHtml(markdown) {
                 </div>
                 <div class="progress-meta">
                   <span>请稍候，结果将在当前页面自动展示</span>
-                  <span>{{ page === "analyzing" ? "分析阶段" : "生成阶段" }}</span>
+                  <span>{{ page === "analyzing" ? "section 分析阶段" : "section 优化阶段" }}</span>
                 </div>
               </div>
             </div>
@@ -432,7 +445,7 @@ function markdownToResumeHtml(markdown) {
             <div class="page-head">
               <p class="section-kicker">步骤三</p>
               <h1>查看匹配分析结果</h1>
-              <p>先确认亮点、缺口和修改建议，再决定是否生成优化后的简历成品。</p>
+              <p>系统会先识别简历由哪些部分组成，再判断每个 section 是否需要针对岗位单独优化。</p>
             </div>
 
             <div class="score-panel">
@@ -462,6 +475,49 @@ function markdownToResumeHtml(markdown) {
               </article>
             </div>
 
+            <div class="section-block">
+              <div class="block-head">
+                <h2>识别出的简历 section</h2>
+                <span class="block-meta">{{ detectedSections.length }} 个部分</span>
+              </div>
+              <div class="section-chip-list">
+                <span v-for="section in detectedSections" :key="`${section.section_type}-${section.order}`" class="section-chip">
+                  {{ section.section_title }}
+                </span>
+              </div>
+            </div>
+
+            <div class="section-block">
+              <div class="block-head">
+                <h2>section 级诊断</h2>
+                <span class="block-meta">逐段判断是否需要修改</span>
+              </div>
+              <div class="section-card-grid">
+                <article
+                  v-for="item in sectionAnalysisCards"
+                  :key="`${item.section_type}-${item.section_title}`"
+                  class="section-card"
+                >
+                  <div class="section-card-head">
+                    <div>
+                      <h3>{{ item.section_title }}</h3>
+                      <p>{{ item.section_type }}</p>
+                    </div>
+                    <span class="status-pill" :class="item.needs_optimization || item.missing_but_recommended ? 'warn' : 'ok'">
+                      {{ sectionStatusLabel(item) }}
+                    </span>
+                  </div>
+                  <p class="section-reason">{{ item.reason }}</p>
+                  <div class="priority-row">
+                    <span>优先级：{{ item.priority }}</span>
+                  </div>
+                  <ul v-if="item.optimization_focus?.length" class="focus-list">
+                    <li v-for="focus in item.optimization_focus" :key="focus">{{ focus }}</li>
+                  </ul>
+                </article>
+              </div>
+            </div>
+
             <div class="page-actions split">
               <button class="secondary-button" @click="page = 'jd'">返回修改 JD</button>
               <button class="primary-button" :disabled="loadingOptimization" @click="generateOptimizedResume">
@@ -474,7 +530,7 @@ function markdownToResumeHtml(markdown) {
             <div class="page-head">
               <p class="section-kicker">步骤四</p>
               <h1>优化后的简历成品</h1>
-              <p>这里展示最终成品预览，同时保留 Markdown 原文，方便继续微调和导出。</p>
+              <p>系统只重写需要优化的 section，再重新组装成完整成品。你可以先查看 section 改写记录，再看最终简历预览。</p>
             </div>
 
             <div class="page-actions split compact-top">
@@ -487,10 +543,37 @@ function markdownToResumeHtml(markdown) {
 
             <div class="result-grid">
               <article class="info-card full">
-                <h3>本次改写重点</h3>
+                <h3>整体改写重点</h3>
                 <ul>
                   <li v-for="item in optimized.change_summary" :key="item">{{ item }}</li>
                 </ul>
+              </article>
+
+              <article class="info-card full">
+                <div class="block-head">
+                  <h3>section 改写记录</h3>
+                  <span class="block-meta">{{ optimizedSectionCards.length }} 个部分</span>
+                </div>
+                <div class="section-card-grid">
+                  <article
+                    v-for="item in optimizedSectionCards"
+                    :key="`${item.section_type}-${item.section_title}`"
+                    class="section-card"
+                  >
+                    <div class="section-card-head">
+                      <div>
+                        <h3>{{ item.section_title }}</h3>
+                        <p>{{ item.section_type }}</p>
+                      </div>
+                      <span class="status-pill" :class="item.updated ? 'warn' : 'ok'">
+                        {{ optimizedSectionStatus(item) }}
+                      </span>
+                    </div>
+                    <ul class="focus-list">
+                      <li v-for="change in item.change_summary" :key="change">{{ change }}</li>
+                    </ul>
+                  </article>
+                </div>
               </article>
 
               <article class="resume-preview">

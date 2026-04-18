@@ -492,6 +492,117 @@ button {
   color: rgba(241, 246, 255, 0.74);
 }
 
+.section-block {
+  margin-top: 24px;
+}
+
+.block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.block-head h2,
+.block-head h3 {
+  margin: 0;
+}
+
+.block-meta {
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.section-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.section-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(24, 33, 51, 0.06);
+  border: 1px solid rgba(24, 33, 51, 0.08);
+  color: #22304c;
+}
+
+.section-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.section-card {
+  padding: 18px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(24, 33, 51, 0.08);
+}
+
+.section-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.section-card-head h3 {
+  margin: 0;
+}
+
+.section-card-head p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.status-pill.ok {
+  background: rgba(12, 139, 125, 0.12);
+  color: var(--brand-dark);
+}
+
+.status-pill.warn {
+  background: rgba(245, 191, 102, 0.18);
+  color: #966017;
+}
+
+.section-reason {
+  margin: 0;
+  color: #26334e;
+}
+
+.priority-row {
+  margin-top: 12px;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.focus-list {
+  margin: 12px 0 0;
+  padding-left: 20px;
+}
+
+.focus-list li + li {
+  margin-top: 8px;
+}
+
 .analysis-grid,
 .result-grid {
   display: grid;
@@ -627,7 +738,8 @@ button {
   .feature-grid,
   .flow-layout,
   .analysis-grid,
-  .result-grid {
+  .result-grid,
+  .section-card-grid {
     grid-template-columns: 1fr;
   }
 
@@ -676,7 +788,9 @@ button {
 
   .page-actions.split,
   .resume-preview-head,
-  .progress-meta {
+  .progress-meta,
+  .block-head,
+  .section-card-head {
     flex-direction: column;
     align-items: flex-start;
   }

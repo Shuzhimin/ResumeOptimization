@@ -1,31 +1,56 @@
 # Resume Optimization Agent
 
-一个可通过 Docker 运行的全栈应用：用户输入或上传简历、输入目标 JD，系统先分析匹配情况，再在用户确认后生成优化后的简历，并支持导出结果。
+一个基于 DeepSeek 的简历优化应用。用户输入或上传简历、输入目标岗位 JD 后，系统会先分析匹配情况，再按简历各个 section 逐段判断是否需要优化，最后重组生成一份可直接查看和导出的中文简历成品。
 
-## 技术栈
+## 功能简介
 
-- 后端：FastAPI + Pydantic + `uv`
-- 前端：Vue 3 + Vite
-- 部署：Docker / Docker Compose
-- LLM：DeepSeek（通过环境变量配置 API Key）
-
-## 功能
-
-- 粘贴简历文本
-- 上传 `TXT` / `PDF` 简历并解析为文本
-- 输入目标岗位 JD
-- 分析并展示：
+- 支持粘贴简历文本
+- 支持上传 `TXT` / `PDF` 简历
+- 输入目标岗位描述（JD）
+- 自动识别简历 section
+- 分析每个 section 是否需要优化
+- 生成：
   - 匹配亮点
   - 主要缺口
   - 优化建议
-  - 匹配度评分
-- 用户确认后生成优化后的简历
-- 页面内查看优化结果
-- 导出为 `.md` 或 `.txt`
+  - section 级诊断结果
+- 仅针对需要优化的部分进行改写
+- 重组输出完整简历成品
+- 支持页面预览与导出 `.md` / `.txt`
 
-## 环境变量
+## 目录结构
 
-可先复制 `.env.example` 为 `.env`，至少包含：
+```text
+.
+├── backend/
+│   └── app/
+│       ├── api/          # FastAPI 路由
+│       ├── core/         # 配置
+│       ├── prompts/      # LLM 提示词
+│       ├── schemas/      # Pydantic 数据结构
+│       └── services/     # 简历分析、优化、文件解析等服务
+├── frontend/
+│   ├── src/              # Vue 页面与样式
+│   ├── package.json
+│   └── vite.config.js
+├── tests/                # API 测试
+├── Dockerfile
+├── docker-compose.yml
+├── pyproject.toml
+└── README.md
+```
+
+## 启动方式
+
+### 1. 配置环境变量
+
+先复制示例文件：
+
+```bash
+cp .env.example .env
+```
+
+然后在 `.env` 中至少配置：
 
 ```env
 DEEPSEEK_API_KEY=your_deepseek_api_key
@@ -39,37 +64,12 @@ MAX_UPLOAD_SIZE_MB=5
 说明：
 
 - `DEEPSEEK_API_KEY` 必填
-- 不要把 API Key 硬编码到代码中
-- `DEEPSEEK_BASE_URL` 和 `DEEPSEEK_MODEL` 提供默认值，可按需覆盖
+- API Key 必须通过环境变量配置，不能硬编码
 
-## 本地开发
-
-### 后端
+### 2. 使用 Docker Compose 启动
 
 ```bash
-uv sync
-uv run uvicorn backend.app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-### 前端
-
-```bash
-cd frontend
-npm install
-npm run dev -- --host 0.0.0.0 --port 5173
-```
-
-开发模式下：
-
-- 后端默认：`http://localhost:8000`
-- 前端默认：`http://localhost:5173`
-
-## Docker 构建与启动
-
-### 方式一：docker compose
-
-```bash
-docker compose up --build
+docker compose up -d
 ```
 
 启动后访问：
@@ -78,77 +78,12 @@ docker compose up --build
 http://localhost:8000
 ```
 
-### 方式二：docker build
+## 基本使用流程
 
-```bash
-docker build -t resume-optimization-agent .
-docker run --rm -p 8000:8000 --env-file .env resume-optimization-agent
-```
-
-## 基本验收流程
-
-1. 启动服务后打开 `http://localhost:8000`
-2. 通过以下任一方式提供简历：
-   - 直接粘贴简历文本
-   - 上传 `TXT` 或 `PDF`
-3. 在 JD 输入框中粘贴目标职位描述
-4. 点击 `Analyze Match`
-5. 检查页面展示的：
-   - `Match Score`
-   - `Strengths`
-   - `Gaps`
-   - `Suggestions`
-6. 点击 `Generate Optimized Resume`
-7. 查看优化后的简历与改动摘要
-8. 点击导出按钮，下载 `.md` 或 `.txt`
-
-## API 概览
-
-- `GET /healthz`
-- `POST /api/v1/parse-resume`
-  - `multipart/form-data`
-  - 字段：`file`
-- `POST /api/v1/analyze`
-  - JSON：`resume_text`, `job_description`
-- `POST /api/v1/optimize`
-  - JSON：`resume_text`, `job_description`, `analysis_context`
-
-## 测试
-
-```bash
-uv run pytest
-```
-
-## 常见问题
-
-### 1. 页面提示缺少 API Key
-
-确认 `.env` 中配置了：
-
-```env
-DEEPSEEK_API_KEY=...
-```
-
-### 2. PDF 上传失败
-
-- 检查文件是否为有效 PDF
-- 某些扫描版 PDF 无法直接提取文本，建议先转为可复制文本或使用 TXT
-
-### 3. 模型返回解析错误
-
-系统要求模型以结构化 JSON 返回分析结果。如果出现偶发解析失败，请重试；服务端会返回可读错误信息。
-
-## 项目结构
-
-```text
-.
-├── backend/
-│   └── app/
-├── frontend/
-│   └── src/
-├── tests/
-├── Dockerfile
-├── docker-compose.yml
-├── pyproject.toml
-└── README.md
-```
+1. 打开首页并进入简历优化流程
+2. 输入或上传简历
+3. 输入目标职位 JD
+4. 等待系统完成 section 识别与匹配分析 (大约需要2分钟)
+5. 查看整体分析结果和 section 级诊断
+6. 生成优化后的简历 （大约需要2分钟）
+7. 查看最终简历成品并导出
